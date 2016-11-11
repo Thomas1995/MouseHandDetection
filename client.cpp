@@ -16,7 +16,7 @@ void error(const char *msg)
 void connect_to_server(int argc, char* argv[])
 {
     if (argc != 3) {
-        error("Usage %s port ip\n");
+        error("Usage %s ip port\n");
     }
     struct sockaddr_in to_station;
     serverSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -32,11 +32,31 @@ void connect_to_server(int argc, char* argv[])
     if (connect(serverSock, (struct sockaddr*)&to_station, sizeof(to_station)) < 0) {
         error("Error connecting\n");
     }
+
+    printf("Client connected to server %d\n", serverSock); 
+}
+void identify()
+{
+    char team_name[7] = "KREST\0";
+    send(serverSock, team_name, 6, 0);
+}
+void send_coords(int x, int y, int state, int socket)
+{
+
+    char msg[5];
+    msg[0] = *((char*)&x + 1);
+    msg[1] = *((char*)&x);
+    msg[2] = *((char*)&y + 1);
+    msg[3] = *((char*)&y);
+    msg[4] = *((char*)&state);
+    send(socket, msg, 5, 0);
 }
 int main(int argc, char *argv[])
 {
 
     connect_to_server(argc, argv);
+    identify();
+
     return 0;
 
 }
