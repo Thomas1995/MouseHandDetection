@@ -10,12 +10,20 @@
 using namespace std;
 using namespace cv;
 
-int H_MIN = 0;
-int H_MAX = 10;
-int S_MIN = 135;
-int S_MAX = 177;
-int V_MIN = 74;
-int V_MAX = 256;
+struct LIMITS {
+  int H_MIN;
+  int H_MAX;
+  int S_MIN;
+  int S_MAX;
+  int V_MIN;
+  int V_MAX;
+
+  LIMITS(int hmn, int hmx, int smn, int smx, int vmn, int vmx)
+    : H_MIN(hmn), H_MAX(hmx), S_MIN(smn), S_MAX(smx), V_MIN(vmn), V_MAX(vmx) {}
+};
+
+LIMITS red_limit(0, 10, 135, 177, 74, 256);
+LIMITS blue_limit(77, 131, 63, 141, 75, 133);
 
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
@@ -47,7 +55,29 @@ vector< vector<Point> > findZones(vector<Point>& points) {
   return zones;
 }
 
+inline double dist(Point a, Point b) {
+  return sqrt( (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) );
+}
+
+Point chooseClosestTo(Point target, vector<Point>& points) {
+  double distMin = dist(target, points[0]);
+  int idx = 0;
+
+  for(int i = 1; i < points.size(); ++i) {
+    double d = dist(target, points[i]);
+    if(d < distMin) {
+      distMin = d;
+      idx = i;
+    }
+  }
+
+  cout << target.x <<" " << target.y << " <--> " << points[idx].x << " " << points[idx].y << "\n";
+
+  return points[idx];
+}
+
 Point lastPoint;
+bool lastPointExists = false;
 int counter = NO_SELECTION_LIMIT;
 
 void choosePoint(vector<Point>& points) {
@@ -67,8 +97,17 @@ void choosePoint(vector<Point>& points) {
 
     if( counter >= NO_SELECTION_LIMIT || fabs(zones[j].front().x - lastPoint.x)
     + fabs(zones[j].front().y - lastPoint.y) <= JUMP_STEP ) {
-      lastPoint = zones[j].front();
-      tmp.push_back(zones[j].front());
+      Point p;
+      if(!lastPointExists) {
+        p = zones[j].front();
+        lastPointExists = true;
+      }
+      else {
+        p = chooseClosestTo(lastPoint, zones[j]);
+      }
+
+      lastPoint = p;
+      tmp.push_back(lastPoint);
       counter = 0;
     }
     else {
@@ -127,8 +166,10 @@ int main(int argc, char** argv)
 	VideoCapture capture;
 
 	capture.open(0);
-	capture.set(CV_CAP_PROP_FRAME_WIDTH,FRAME_WIDTH);
-	capture.set(CV_CAP_PROP_FRAME_HEIGHT,FRAME_HEIGHT);
+	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+
+  LIMITS lim = red_limit;
 
 	while(true) {
 		capture.read(cameraFeed);
@@ -136,7 +177,9 @@ int main(int argc, char** argv)
 
 		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
-		inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+		inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
+      Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
+
 	  morphOps(threshold);
 
 		auto points = trackObject(threshold, cameraFeed);
@@ -144,8 +187,8 @@ int main(int argc, char** argv)
 
 		if(!points.empty()) {
       auto p = points.front();
-      DataProcessor::instance()->SendCursorData(p.x, p.y, 1, serverSock);
-			circle(cameraFeed, p, 10, Scalar(0,0,255));
+      DataProcessor::instance()->SendCursorData(FRAME_WIDTH - p.x, p.y, 1, serverSock);
+			circle(cameraFeed, p, 10, Scalar(0, 0, 255));
 		}
 
 		imshow("Camera", cameraFeed);
