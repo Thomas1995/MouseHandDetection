@@ -10,6 +10,45 @@ using namespace std;
 
 void drawText(Mat & image);
 
+vector< vector<Vec3f> > findZones(vector<Vec3f>& circles) {
+  vector< vector<Vec3f> > zones;
+
+  for(auto c : circles) {
+    bool foundMatch = false;
+    for(int i = 0; i < zones.size(); ++i) {
+      if( fabs(zones[i].back()[0] - c[0]) + fabs(zones[i].back()[1] - c[1]) <= 20 ) {
+        foundMatch = true;
+        zones[i].push_back(c);
+        break;
+      }
+    }
+
+    if(!foundMatch) {
+      vector<Vec3f> tmp;
+      tmp.push_back(c);
+      zones.push_back(tmp);
+    }
+  }
+
+  return zones;
+}
+
+void chooseCircle(vector<Vec3f>& circles) {
+  vector<Vec3f> correctCircles;
+  vector< vector<Vec3f> > zones = findZones(correctCircles);
+
+  int j = -1, mx = 0;
+  for(int i = 0; i < zones.size(); ++i) {
+    if(mx < zones[i].size()) {
+      mx = zones[i].size();
+      j = i;
+    }
+  }
+
+  if(j >= 0)
+    circles = zones[j];
+}
+
 int main()
 {
     cout << "Built with OpenCV " << CV_VERSION << endl;
@@ -34,6 +73,8 @@ int main()
                     120, 25, 30, 50 // change the last two parameters
                     // (min_radius & max_radius) to detect larger circles
                   );
+
+            chooseCircle(circles);
 
             for( size_t i = 0; i < circles.size(); i++ )
             {
