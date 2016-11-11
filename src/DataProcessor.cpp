@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <math.h>
 #define MAX_QUEUE_SIZE 25
+#define PREDICTION_OFFSET 2.82
 
 
 DataProcessor* DataProcessor::m_instance = nullptr;
@@ -68,9 +69,9 @@ void DataProcessor::PredictNext(int socket)
 		return;
 	}
 	double iplen = sqrt(pow(dy, 2) + pow(dx, 2));
-	int offset = 5;
-	int newY = offset * (dy / iplen) + m_lastData[1].Get().y;
-	int newX = offset * (dx / iplen) + m_lastData[1].Get().x;
+	double offset = PREDICTION_OFFSET;
+	int newY = round(offset * (dy / iplen) + m_lastData[1].Get().y);
+	int newX = round(offset * (dx / iplen) + m_lastData[1].Get().x);
 	SendCursorData(newX, newY, m_lastData[1].Get().state, socket);
 
 }

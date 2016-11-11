@@ -4,9 +4,11 @@
 #include "../include/DataProcessor.h"
 #include <chrono>
 extern int serverSock;
+#define WATCHER_SLEEP_TIME 10
+#define WATCHER_DIFTIME_FOR_PREDICTION 30
 Watcher::Watcher()
 {
-
+	std::thread(Run);
 }
 
 Watcher::~Watcher()
@@ -27,12 +29,12 @@ Watcher* Watcher::instance()
 void Watcher::Run()
 {
 	while (true) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		if (GetTime() - DataProcessor::instance()->GetLastTime().Get() < 10) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(WATCHER_SLEEP_TIME));
+		if (GetTime() - DataProcessor::instance()->GetLastTime().Get() < WATCHER_DIFTIME_FOR_PREDICTION) {
+			printf("Predicting next move..\n");
 			DataProcessor::instance()->PredictNext(serverSock);
 		}
 	}
-
 }
 
 long int Watcher::GetTime()
