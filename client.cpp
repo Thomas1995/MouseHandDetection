@@ -7,6 +7,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+
+#include "include/DataProcessor.h"
 int serverSock;
 void error(const char *msg)
 {
@@ -40,23 +42,12 @@ void identify()
     char team_name[7] = "KREST\0";
     send(serverSock, team_name, 6, 0);
 }
-void send_coords(int x, int y, int state, int socket)
-{
-
-    char msg[5];
-    msg[0] = *((char*)&x + 1);
-    msg[1] = *((char*)&x);
-    msg[2] = *((char*)&y + 1);
-    msg[3] = *((char*)&y);
-    msg[4] = *((char*)&state);
-    send(socket, msg, 5, 0);
-}
 int main(int argc, char *argv[])
 {
 
     connect_to_server(argc, argv);
     identify();
-
+    DataProcessor::instance()->SendCursorData(200,200,1,serverSock);
     return 0;
 
 }
