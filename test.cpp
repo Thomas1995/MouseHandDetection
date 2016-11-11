@@ -12,6 +12,7 @@ void drawText(Mat & image);
 
 #define SAME_ZONE_STEP 20
 #define JUMP_STEP 50
+#define NO_SELECTION_LIMIT 3
 
 vector< vector<Vec3f> > findZones(vector<Vec3f>& circles) {
   vector< vector<Vec3f> > zones;
@@ -37,7 +38,7 @@ vector< vector<Vec3f> > findZones(vector<Vec3f>& circles) {
 }
 
 Vec3f lastCircle;
-int counter = 10;
+int counter = NO_SELECTION_LIMIT;
 
 void chooseCircle(vector<Vec3f>& circles) {
 
@@ -54,7 +55,7 @@ void chooseCircle(vector<Vec3f>& circles) {
   if(j >= 0) {
     vector<Vec3f> tmp;
 
-    if( counter >= 10 || fabs(zones[j].front()[0] - lastCircle[0])
+    if( counter >= NO_SELECTION_LIMIT || fabs(zones[j].front()[0] - lastCircle[0])
     + fabs(zones[j].front()[1] - lastCircle[1]) <= JUMP_STEP ) {
       lastCircle = zones[j].front();
       tmp.push_back(zones[j].front());
