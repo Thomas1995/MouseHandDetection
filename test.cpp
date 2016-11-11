@@ -85,6 +85,19 @@ int main()
                 break;
             drawText(image);
 
+            Mat frame;
+            GaussianBlur(image, frame, Size(0, 0), 3);
+            addWeighted(image, 1.5, frame, -0.5, 0, frame);
+            image = frame;
+
+            Mat kernel = (Mat_<float>(3,3) <<
+              0,  1, 0,
+              1, -4, 1,
+              0,  1, 0);
+            int window_size = 3;
+
+            filter2D(image, image, -1, kernel);
+
             Mat cimg;
             cvtColor(image, cimg, CV_BGR2GRAY);
 
