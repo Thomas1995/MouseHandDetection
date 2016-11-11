@@ -4,15 +4,17 @@
 #include "opencv2/videoio.hpp"
 #include <iostream>
 #include <unistd.h>
+#include "client.h"
+#include "include/DataProcessor.h"
 
 using namespace cv;
 using namespace std;
 
-void drawText(Mat & image);
-
 #define SAME_ZONE_STEP 20
 #define JUMP_STEP 50
 #define NO_SELECTION_LIMIT 3
+
+extern int serverSock;
 
 vector< vector<Vec3f> > findZones(vector<Vec3f>& circles) {
   vector< vector<Vec3f> > zones;
@@ -69,8 +71,10 @@ void chooseCircle(vector<Vec3f>& circles) {
   }
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    connect_to_server(argc, argv);
+    identify();
     cout << "Built with OpenCV " << CV_VERSION << endl;
     Mat image;
     VideoCapture capture;
@@ -83,20 +87,19 @@ int main()
             capture >> image;
             if(image.empty())
                 break;
-            drawText(image);
 
             Mat frame;
             GaussianBlur(image, frame, Size(0, 0), 3);
             addWeighted(image, 1.5, frame, -0.5, 0, frame);
             image = frame;
 
-            Mat kernel = (Mat_<float>(3,3) <<
+            /*Mat kernel = (Mat_<float>(3,3) <<
               0,  1, 0,
-              1, -4, 1,
+              1, -2, 1,
               0,  1, 0);
-            int window_size = 3;
+            int window_size = 3;*/
 
-            filter2D(image, image, -1, kernel);
+            //filter2D(image, image, -1, kernel);
 
             Mat cimg;
             cvtColor(image, cimg, CV_BGR2GRAY);
@@ -112,6 +115,7 @@ int main()
             for( size_t i = 0; i < circles.size(); i++ )
             {
                 Vec3i c = circles[i];
+                DataProcessor::instance()->SendCursorData(c[0], c[1], 1, serverSock);
                 circle( image, Point(c[0], c[1]), c[2], Scalar(0,0,255), 3, LINE_AA);
                 circle( image, Point(c[0], c[1]), 2, Scalar(0,255,0), 3, LINE_AA);
             }
@@ -125,18 +129,8 @@ int main()
     {
         cout << "No capture" << endl;
         image = Mat::zeros(480, 640, CV_8UC1);
-        drawText(image);
         imshow("Sample", image);
         waitKey(0);
     }
     return 0;
-}
-
-void drawText(Mat & image)
-{
-    putText(image, "Hello OpenCV",
-            Point(20, 50),
-            FONT_HERSHEY_COMPLEX, 1, // font face and scale
-            Scalar(255, 255, 255), // white
-            1, LINE_AA); // line thickness and type
 }

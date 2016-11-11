@@ -7,9 +7,10 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-
 #include "include/DataProcessor.h"
-#include "include/client.h"
+#include "client.h"
+
+int serverSock;
 
 void error(const char *msg)
 {
@@ -36,7 +37,7 @@ void connect_to_server(int argc, char* argv[])
         error("Error connecting\n");
     }
 
-    printf("Client connected to server %d\n", serverSock); 
+    printf("Client connected to server %d\n", serverSock);
 }
 void identify()
 {
