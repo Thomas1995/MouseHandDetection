@@ -26,18 +26,23 @@ long int DataProcessor::getTime()
 }
 void DataProcessor::SendCursorData(int x, int y, int state, int socket)
 {
-	m_queuedData.push(CursorData(x,y,state));
+    if (m_queuedData.size() > 50) {
+	printf("Clearing queue..\n");
+	std::queue<CursorData> empty;
+	std::swap(m_queuedData, empty);
+    }
 
-	printf("time: %ld\n", getTime());
-	if (getTime() - m_timer > 10) {
-		m_timer = getTime();
-		char* msg = m_queuedData.front().ToMsg();
-    	m_queuedData.pop();
-    	send(socket, msg, 5, 0);
-    	delete msg;
-	}
+    m_queuedData.push(CursorData(x,y,state));
+
+    if (getTime() - m_timer > 5) {
+	m_timer = getTime();
+	char* msg = m_queuedData.front().ToMsg();
+	m_queuedData.pop();
+	send(socket, msg, 5, 0);
+	delete msg;
+    }
 
 
-   
-    
+
+
 }
