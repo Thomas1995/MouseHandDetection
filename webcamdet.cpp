@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "client.h"
 #include "include/DataProcessor.h"
+#include "include/Watcher.h"
 
 using namespace std;
 using namespace cv;
@@ -22,7 +23,8 @@ struct LIMITS {
     : H_MIN(hmn), H_MAX(hmx), S_MIN(smn), S_MAX(smx), V_MIN(vmn), V_MAX(vmx) {}
 };
 
-LIMITS red_limit(0, 10, 135, 177, 74, 256);
+//LIMITS red_limit(0, 10, 135, 177, 74, 256);
+LIMITS red_limit(0, 10, 143, 256, 86, 162);
 LIMITS blue_limit(77, 131, 63, 141, 75, 133);
 
 const int FRAME_WIDTH = 640;
@@ -70,8 +72,6 @@ Point chooseClosestTo(Point target, vector<Point>& points) {
       idx = i;
     }
   }
-
-  cout << target.x <<" " << target.y << " <--> " << points[idx].x << " " << points[idx].y << "\n";
 
   return points[idx];
 }
@@ -153,11 +153,13 @@ void morphOps(Mat &thresh){
 }
 
 extern int serverSock;
+int click = 1;
 
 int main(int argc, char** argv)
 {
   connect_to_server(argc, argv);
   identify();
+  Watcher::instance();
 
 	Mat cameraFeed;
 	Mat threshold;
@@ -187,7 +189,7 @@ int main(int argc, char** argv)
 
 		if(!points.empty()) {
       auto p = points.front();
-      DataProcessor::instance()->SendCursorData(FRAME_WIDTH - p.x, p.y, 1, serverSock);
+      DataProcessor::instance()->SendCursorData(FRAME_WIDTH - p.x, p.y, click, serverSock);
 			circle(cameraFeed, p, 10, Scalar(0, 0, 255));
 		}
 
