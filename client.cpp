@@ -9,7 +9,8 @@
 #include <arpa/inet.h>
 
 #include "include/DataProcessor.h"
-int serverSock;
+#include "include/client.h"
+
 void error(const char *msg)
 {
     printf("%s\n", msg);
@@ -41,13 +42,4 @@ void identify()
 {
     char team_name[7] = "KREST\0";
     send(serverSock, team_name, 6, 0);
-}
-int main(int argc, char *argv[])
-{
-
-    connect_to_server(argc, argv);
-    identify();
-    DataProcessor::instance()->SendCursorData(200,200,1,serverSock);
-    return 0;
-
 }
