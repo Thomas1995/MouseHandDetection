@@ -10,13 +10,16 @@ using namespace std;
 
 void drawText(Mat & image);
 
+#define SAME_ZONE_STEP 20
+#define JUMP_STEP 50
+
 vector< vector<Vec3f> > findZones(vector<Vec3f>& circles) {
   vector< vector<Vec3f> > zones;
 
   for(auto c : circles) {
     bool foundMatch = false;
     for(int i = 0; i < zones.size(); ++i) {
-      if( fabs(zones[i].back()[0] - c[0]) + fabs(zones[i].back()[1] - c[1]) <= 20 ) {
+      if( fabs(zones[i].back()[0] - c[0]) + fabs(zones[i].back()[1] - c[1]) <= SAME_ZONE_STEP ) {
         foundMatch = true;
         zones[i].push_back(c);
         break;
@@ -33,9 +36,12 @@ vector< vector<Vec3f> > findZones(vector<Vec3f>& circles) {
   return zones;
 }
 
+Vec3f lastCircle;
+int counter = 10;
+
 void chooseCircle(vector<Vec3f>& circles) {
-  vector<Vec3f> correctCircles;
-  vector< vector<Vec3f> > zones = findZones(correctCircles);
+
+  vector< vector<Vec3f> > zones = findZones(circles);
 
   int j = -1, mx = 0;
   for(int i = 0; i < zones.size(); ++i) {
@@ -45,8 +51,21 @@ void chooseCircle(vector<Vec3f>& circles) {
     }
   }
 
-  if(j >= 0)
-    circles = zones[j];
+  if(j >= 0) {
+    vector<Vec3f> tmp;
+
+    if( counter >= 10 || fabs(zones[j].front()[0] - lastCircle[0])
+    + fabs(zones[j].front()[1] - lastCircle[1]) <= JUMP_STEP ) {
+      lastCircle = zones[j].front();
+      tmp.push_back(zones[j].front());
+      counter = 0;
+    }
+    else {
+      ++counter;
+    }
+
+    circles = tmp;
+  }
 }
 
 int main()
