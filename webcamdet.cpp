@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "client.h"
 #include "include/DataProcessor.h"
+#include "include/Watcher.h"
 
 using namespace std;
 using namespace cv;
@@ -71,7 +72,7 @@ Point chooseClosestTo(Point target, vector<Point>& points) {
     }
   }
 
-  cout << target.x <<" " << target.y << " <--> " << points[idx].x << " " << points[idx].y << "\n";
+//  cout << target.x <<" " << target.y << " <--> " << points[idx].x << " " << points[idx].y << "\n";
 
   return points[idx];
 }
@@ -158,43 +159,44 @@ int main(int argc, char** argv)
 {
   connect_to_server(argc, argv);
   identify();
+  //Watcher::instance()->Init();
 
-	Mat cameraFeed;
-	Mat threshold;
-	Mat HSV;
+  Mat cameraFeed;
+  Mat threshold;
+  Mat HSV;
 
-	VideoCapture capture;
+  VideoCapture capture;
 
-	capture.open(0);
-	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+  capture.open(0);
+  capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+  capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
   LIMITS lim = red_limit;
 
-	while(true) {
-		capture.read(cameraFeed);
-		Mat src = cameraFeed;
+  while(true) {
+    capture.read(cameraFeed);
+    Mat src = cameraFeed;
 
-		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
+    cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
-		inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
-      Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
+    inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
+	Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
 
-	  morphOps(threshold);
+    morphOps(threshold);
 
-		auto points = trackObject(threshold, cameraFeed);
-		choosePoint(points);
+    auto points = trackObject(threshold, cameraFeed);
+    choosePoint(points);
 
-		if(!points.empty()) {
+    if(!points.empty()) {
       auto p = points.front();
       DataProcessor::instance()->SendCursorData(FRAME_WIDTH - p.x, p.y, 1, serverSock);
-			circle(cameraFeed, p, 10, Scalar(0, 0, 255));
-		}
+      circle(cameraFeed, p, 10, Scalar(0, 0, 255));
+    }
 
-		imshow("Camera", cameraFeed);
+    imshow("Camera", cameraFeed);
 
-		waitKey(10);
-	}
+    waitKey(10);
+  }
 
-	return 0;
+  return 0;
 }

@@ -60,8 +60,8 @@ void DataProcessor::SendCursorData(int x, int y, int state, int socket)
 
 void DataProcessor::PredictNext(int socket)
 {
-	if (m_queuedData.size() > 2) {
-
+	if (m_initDataNr.Get() < 2) {
+		return;
 	}
 	int dy = abs(m_lastData[1].Get().y - m_lastData[0].Get().y);
 	int dx = abs(m_lastData[1].Get().x - m_lastData[0].Get().x);
@@ -72,6 +72,7 @@ void DataProcessor::PredictNext(int socket)
 	double offset = PREDICTION_OFFSET;
 	int newY = round(offset * (dy / iplen) + m_lastData[1].Get().y);
 	int newX = round(offset * (dx / iplen) + m_lastData[1].Get().x);
+	printf("Predicting next move.. %d %d %d\n", newX, newY, m_lastData[1].Get().state);
 	SendCursorData(newX, newY, m_lastData[1].Get().state, socket);
 
 }

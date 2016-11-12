@@ -6,9 +6,11 @@
 extern int serverSock;
 #define WATCHER_SLEEP_TIME 10
 #define WATCHER_DIFTIME_FOR_PREDICTION 30
-Watcher::Watcher()
+Watcher::Watcher() 
 {
-	std::thread(Run);
+	
+	
+	
 }
 
 Watcher::~Watcher()
@@ -16,6 +18,10 @@ Watcher::~Watcher()
 
 }
 
+std::thread& Watcher::Thread()
+{
+	return m_thread;
+}
 Watcher* Watcher::m_instance = nullptr;
 
 Watcher* Watcher::instance()
@@ -26,12 +32,20 @@ Watcher* Watcher::instance()
 	return m_instance;
 }
 
+void Watcher::Init()
+{
+	m_thread = std::thread(Run);
+	printf("Watcher running\n");
+}
+
 void Watcher::Run()
 {
 	while (true) {
+		//("Sleeping..\n");
 		std::this_thread::sleep_for(std::chrono::milliseconds(WATCHER_SLEEP_TIME));
-		if (GetTime() - DataProcessor::instance()->GetLastTime().Get() < WATCHER_DIFTIME_FOR_PREDICTION) {
-			printf("Predicting next move..\n");
+		//printf("Waking up..\n");
+		if (GetTime() - DataProcessor::instance()->GetLastTime().Get() > WATCHER_DIFTIME_FOR_PREDICTION) {
+			
 			DataProcessor::instance()->PredictNext(serverSock);
 		}
 	}
