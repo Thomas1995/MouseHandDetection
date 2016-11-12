@@ -136,7 +136,9 @@ vector<Point> trackObject(Mat& threshold, int& nrp) {
 
   nrp = 0;
   for(auto cont : contours) {
-    nrp += cont.size();
+      for (auto p : cont)
+        if (p.x >= FRAME_WIDTH / 2)
+          nrp++;
   }
 
 	double refArea = 0;
@@ -170,6 +172,7 @@ void morphOps(Mat &thresh){
 extern int serverSock;
 int click;
 int rightclick;
+int prevClick;
 bool moved = true;
 int moveCount = 0;
 
@@ -235,7 +238,7 @@ vector<string> keys = {
   "a", "b", "c", "d", "e", "f", "g", "h",
   "i", "j", "k", "l", "m", "n", "o", "p",
   "q", "r", "s", "t", "u", "v", "w", "x",
-  "y", "z", "space", "enter", "ctrl", "shift", "ctsh", "back"
+  "y", "z", "spc", "ent", "ctr", "shf", "ctsh", "bks"
 };
 
 vector<char> keyCodes {
@@ -285,7 +288,13 @@ int main(int argc, char** argv)
     Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
     morphOps(threshold);
     vector<Point> clickPoints = trackObject(threshold, dump);
-    if (dump < 30) {
+
+     dump = 0;
+    for (auto p : clickPoints)
+      if (p.x >= FRAME_WIDTH * 0.75)
+        dump++;
+
+    if (dump < 1) {
       click = 1;
       currentTime = 0;
       tmpTime = DataProcessor::getTime();
@@ -322,9 +331,9 @@ int main(int argc, char** argv)
       bool hasEnteredKey = false;
       char enteredKey;
 
-      if (enterKey) {
-        int xRatio = FRAME_WIDTH / 8;
-        int yRatio = FRAME_HEIGHT / 5;
+      if (enterKey && click) {
+        int xRatio = FRAME_WIDTH / 10;
+        int yRatio = FRAME_HEIGHT / 6;
         int x = points.front().x / xRatio;
         int y = points.front().y / yRatio;
 
@@ -347,7 +356,12 @@ int main(int argc, char** argv)
         }
         currentLetter = newLetter;
         tmpLetterTime = DataProcessor::getTime();
-        if (currentLetterTime >= limitLetterTime) {
+        //if (currentLetterTime >= limitLetterTime) {
+        if (prevClick != click) {
+          if(currentLetter == 8) {
+            ctrlPressed = shiftPressed = ctrlshiftPressed = false;
+          }
+
           if(currentLetter == 1) {
             if(shiftPressed == false)
               ctrlPressed = true;
@@ -422,9 +436,9 @@ JUMP:
         rightclick = 0;
         //DataProcessor::instance()->SendInputDataWin(p.x, p.y, enteredKey, click, rightclick, serverSock);
 
-        if(p.x <= KEYBOARD_SECTION && p.y <= KEYBOARD_SECTION)
+        if(p.x <= KEYBOARD_SECTION && FRAME_HEIGHT - p.y <= KEYBOARD_SECTION)
           capsLockOn = true;
-        if(FRAME_WIDTH - p.x <= KEYBOARD_SECTION && p.y <= KEYBOARD_SECTION)
+        if(FRAME_WIDTH - p.x <= KEYBOARD_SECTION && FRAME_HEIGHT - p.y <= KEYBOARD_SECTION)
           capsLockOn = false;
 
         circle(cameraFeed, p, 10, Scalar(0, 0, 255));
@@ -435,13 +449,13 @@ JUMP:
     enterKey = 1;
 
     if (enterKey) {
-      int xRatio = FRAME_WIDTH / 8;
-      int yRatio = FRAME_HEIGHT / 5;
+      int xRatio = FRAME_WIDTH / 10;
+      int yRatio = FRAME_HEIGHT / 6;
       for (int i = 1; i <= 8; i++)
-        line(cameraFeed, Point(i * xRatio, yRatio), Point(i * xRatio, FRAME_HEIGHT), Scalar(0, 255, 0));
+        line(cameraFeed, Point(i * xRatio, yRatio), Point(i * xRatio - 2, FRAME_HEIGHT - yRatio), Scalar(0, 255, 0));
 
       for (int i = 1; i <= 5; i++)
-        line(cameraFeed, Point(0, i * yRatio), Point(FRAME_WIDTH, i * yRatio), Scalar(0, 255, 0));
+        line(cameraFeed, Point(0, i * yRatio), Point(FRAME_WIDTH - 2 * xRatio, i * yRatio), Scalar(0, 255, 0));
 
       int nr = 0;
       for (int j = 0; j < 4; j++) {
@@ -449,22 +463,28 @@ JUMP:
           string s = keys[nr++];
 
           putText(cameraFeed, s.c_str(), cvPoint(xRatio * i + 5, yRatio * (j + 2) - yRatio / 2),
-              FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
+              FONT_HERSHEY_COMPLEX, 0.8, cvScalar(0,0,255), 1, CV_AA);
         }
       }
     }
 
     if(!capsLockOn) {
-      line(cameraFeed, Point(0, KEYBOARD_SECTION), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
-      line(cameraFeed, Point(KEYBOARD_SECTION, 0), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
+      line(cameraFeed, Point(0, FRAME_HEIGHT - KEYBOARD_SECTION),
+        Point(KEYBOARD_SECTION, FRAME_HEIGHT - KEYBOARD_SECTION), Scalar(0, 0, 255));
+      line(cameraFeed, Point(KEYBOARD_SECTION, FRAME_HEIGHT),
+        Point(KEYBOARD_SECTION, FRAME_HEIGHT - KEYBOARD_SECTION), Scalar(0, 0, 255));
     }
     else {
-      line(cameraFeed, Point(FRAME_WIDTH - KEYBOARD_SECTION, 0), Point(FRAME_WIDTH - KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
-      line(cameraFeed, Point(FRAME_WIDTH, KEYBOARD_SECTION), Point(FRAME_WIDTH - KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
+      line(cameraFeed, Point(FRAME_WIDTH - KEYBOARD_SECTION, FRAME_HEIGHT),
+        Point(FRAME_WIDTH - KEYBOARD_SECTION, FRAME_HEIGHT - KEYBOARD_SECTION), Scalar(0, 0, 255));
+      line(cameraFeed, Point(FRAME_WIDTH, FRAME_HEIGHT - KEYBOARD_SECTION),
+        Point(FRAME_WIDTH - KEYBOARD_SECTION, FRAME_HEIGHT - KEYBOARD_SECTION), Scalar(0, 0, 255));
     }
 
+    for (auto p : clickPoints)
+      circle(cameraFeed, p, 10, Scalar(0, 255, 0));
     imshow("Camera", cameraFeed);
-
+    prevClick = click;
     waitKey(10);
   }
 
