@@ -30,12 +30,13 @@ LIMITS blue_limit(77, 132, 141, 256, 0, 256);
 LIMITS orange_limit(0, 25, 206, 256, 0, 256);
 LIMITS green_limit(35, 139, 38, 58, 175, 256);
 
-const int FRAME_WIDTH = 800;
-const int FRAME_HEIGHT = 600;
+const int FRAME_WIDTH = 640;
+const int FRAME_HEIGHT = 480;
 
 #define SAME_ZONE_STEP 20
 #define JUMP_STEP 50
 #define NO_SELECTION_LIMIT 3
+#define KEYBOARD_SECTION 50
 
 vector< vector<Point> > findZones(vector<Point>& points) {
   vector< vector<Point> > zones;
@@ -227,6 +228,13 @@ long long limitLetterTime = 1000;
 
 long long debug = 0;
 
+vector<string> keys = {
+  "a", "b", "c", "d", "e", "f", "g", "h",
+  "i", "j", "k", "l", "m", "n", "o", "p",
+  "q", "r", "s", "t", "u", "v", "w", "x",
+  "y", "z", "space", "enter", "ctrl", "shift", "ctsh", "back"
+};
+
 int main(int argc, char** argv)
 {
   tmpTime = DataProcessor::getTime();
@@ -278,10 +286,10 @@ int main(int argc, char** argv)
       tmpTime = DataProcessor::getTime();
     }
 
-    if (currentTime > limitTime && nothing <= 5) {
+    /*if (currentTime > limitTime && nothing <= 5) {
         enterKey = 1 - enterKey;
         currentTime = 0;
-    }
+    }*/
 
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
 	   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
@@ -302,12 +310,24 @@ int main(int argc, char** argv)
         Q.pop_front();
 
       if (enterKey) {
-        int xRatio = FRAME_WIDTH / 5;
-        int yRatio = FRAME_HEIGHT / 6;
-        double x = points.front().x;
-        double y = points.front().y;
+        int xRatio = FRAME_WIDTH / 8;
+        int yRatio = FRAME_HEIGHT / 5;
+        int x = points.front().x / xRatio;
+        int y = points.front().y / yRatio;
 
-        char newLetter = (char)('a' + (((int)(x / xRatio) * 6 + (int)(y / yRatio)) % 26));
+        if(y == 0) {
+          goto JUMP;
+        }
+
+        int idx = (y - 1) * 8 + x;
+        if(idx < 0)
+          goto JUMP;
+        if(idx > keys.size())
+          goto JUMP;
+
+        char newLetter = keys[idx][0];
+
+        //char newLetter = (char)('a' + (((int)(x / xRatio) * 6 + (int)(y / yRatio)) % 26));
         if (currentLetter == newLetter) {
           currentLetterTime += DataProcessor::getTime() - tmpLetterTime;
         } else {
@@ -321,34 +341,46 @@ int main(int argc, char** argv)
         }
       }
 
+JUMP:
+
       if(!points.empty()) {
         auto p = points.front();
         //cout << "p.x: " << p.x << " " << "p.y: " << p.y << endl;
         DataProcessor::instance()->SendCursorData(p.x, p.y, click/*getClick()*/, serverSock);
+        if(p.x <= KEYBOARD_SECTION && p.y <= KEYBOARD_SECTION && click)
+          enterKey = 1 - enterKey;
         circle(cameraFeed, p, 10, Scalar(0, 0, 255));
         break;
       }
     }
 
     if (enterKey) {
-      int xRatio = FRAME_WIDTH / 5;
-      int yRatio = FRAME_HEIGHT / 6;
-      for (int i = 1; i <= 5; i++)
-        line(cameraFeed, Point(i * xRatio, 0), Point(i * xRatio, FRAME_HEIGHT), Scalar(0, 255, 0));
+      int xRatio = FRAME_WIDTH / 8;
+      int yRatio = FRAME_HEIGHT / 5;
+      for (int i = 1; i <= 8; i++)
+        line(cameraFeed, Point(i * xRatio, yRatio), Point(i * xRatio, FRAME_HEIGHT), Scalar(0, 255, 0));
 
       for (int i = 1; i <= 5; i++)
         line(cameraFeed, Point(0, i * yRatio), Point(FRAME_WIDTH, i * yRatio), Scalar(0, 255, 0));
 
-      for (int j = 0; j < 6; j++) {
-        for (int i = 0; i < 5; i++) {
-          char c = 'a' + ((i * 6 + j) % 26);
+      int nr = 0;
+      for (int j = 0; j < 4; j++) {
+        for (int i = 0; i < 8; i++) {
+          /*char c = 'a' + ((i * 6 + j) % 26);
           string s;
-          s.push_back(c);
-          putText(cameraFeed, s.c_str(), cvPoint(xRatio * i, yRatio * (j + 1)),
+          s.push_back(c);*/
+
+          string s = keys[nr++];
+
+          putText(cameraFeed, s.c_str(), cvPoint(xRatio * i + 5, yRatio * (j + 2) - yRatio / 2),
               FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
         }
       }
     }
+
+    line(cameraFeed, Point(0, KEYBOARD_SECTION), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
+    line(cameraFeed, Point(KEYBOARD_SECTION, 0), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
+
     imshow("Camera", cameraFeed);
 
     waitKey(10);
