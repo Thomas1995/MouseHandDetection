@@ -168,27 +168,17 @@ void morphOps(Mat &thresh){
 
 extern int serverSock;
 int click;
+bool moved = true;
 
 int getClick() {
-  /*LIMITS lim = green_limit;
-  Mat HSV, threshold;
-  img.copyTo(HSV);
-
-  inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
-   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
-
-  morphOps(threshold);
-
-  int nrp;
-  trackObject(threshold, nrp);
-
-  if(nrp >= 20)
-    return 0;
-
-  return 1;*/
-
-  if( dist(Q.front(), Q.back()) <= 30 )
-    click = 1 - click;
+  if( dist(Q.front(), Q.back()) <= 30) {
+    if(moved)
+      click = 1 - click;
+    //moved = false;
+  }
+  else {
+    moved = true;
+  }
 
   return click;
 }

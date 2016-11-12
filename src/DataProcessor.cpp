@@ -6,7 +6,7 @@
 #include <math.h>
 #define MAX_QUEUE_SIZE 5
 #define PREDICTION_OFFSET 2.82
-#define DELTA_TIME_SEND 7
+#define DELTA_TIME_SEND 3
 
 
 DataProcessor* DataProcessor::m_instance = nullptr;
@@ -14,7 +14,7 @@ DataProcessor* DataProcessor::instance()
 {
     if (m_instance == nullptr) {
         m_instance = new DataProcessor();
-        
+
 
     }
     return m_instance;
@@ -22,7 +22,7 @@ DataProcessor* DataProcessor::instance()
 DataProcessor::DataProcessor() : m_lastTimeSent(getTime())
 {
 
-	
+
 }
 long int DataProcessor::GetLastTime()
 {
@@ -58,12 +58,9 @@ CursorData DataProcessor::Interpolate()
     double x = 0, y = 0, state = 0;
     for (auto it : m_queuedData)
     {
-	x += it.x;
-	y += it.y;
-	state += it.state;
-
-
+    	x += it.x;
+    	y += it.y;
+    	state += it.state;
     }
-    return CursorData(round(x / m_queuedData.size()), round(y / m_queuedData.size()), round(state / m_queuedData.size()));
+    return CursorData(round(x / m_queuedData.size()), round(y / m_queuedData.size()), m_queuedData.back().state);
 }
-
