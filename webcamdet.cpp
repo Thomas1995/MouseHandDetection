@@ -169,18 +169,49 @@ void morphOps(Mat &thresh){
 extern int serverSock;
 int click;
 bool moved = true;
+int moveCount = 0;
+
+double getDist(double x1, double y1, double x2, double y2) {
+  return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}
 
 int getClick() {
-  if( dist(Q.front(), Q.back()) <= 30) {
+  /*if( dist(Q.front(), Q.back()) <= 30) {
     if(moved)
       click = 1 - click;
-    //moved = false;
+    if(++moveCount % 5 == 0)
+      moved = false;
   }
   else {
     moved = true;
+  }*/
+
+  if (Q.size() < 12)
+    return click;
+
+  double meanX = 0;
+  double meanY = 0;
+  for (auto& it : Q) {
+    meanX += it.x;
+    meanY += it.y;
   }
 
+  meanX /= Q.size();
+  meanY /= Q.size();
+
+  double maxDist = 45;
+
+  int count = 0;
+  for (auto it : Q) {
+    if (getDist(it.x, it.y, meanX, meanY) > maxDist)
+      count++;
+    if (count > Q.size() / 5)
+      return click;
+  }
+  Q.clear();
+  click = 1 - click;
   return click;
+
 }
 
 int main(int argc, char** argv)
@@ -201,14 +232,18 @@ int main(int argc, char** argv)
   LIMITS lim = orange_limit;
 
   while(true) {
+    //printf("time img %lu\n", DataProcessor::getTime());
     capture.read(cameraFeed);
 
     Mat dst;
     flip(cameraFeed, dst, 1);
     cameraFeed = dst;
 
-    Mat src = cameraFeed;
-
+    //Mat src = cameraFeed;
+    Mat src;
+    cv::GaussianBlur(cameraFeed, src, cv::Size(0, 0), 3);
+    cv::addWeighted(cameraFeed, 1.5, src, -0.5, 0, src);
+    cameraFeed = src;
     cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
@@ -216,16 +251,31 @@ int main(int argc, char** argv)
 
     morphOps(threshold);
 
-    int dump;
-    auto points = trackObject(threshold, dump);
-    choosePoint(points);
+    int attempts = 1;
+    while (attempts != 0) {
+      int dump;
+      auto points = trackObject(threshold, dump);
 
-    if(!points.empty()) {
-      auto p = points.front();
-      DataProcessor::instance()->SendCursorData(p.x, p.y, getClick(), serverSock);
-      circle(cameraFeed, p, 10, Scalar(0, 0, 255));
+      attempts--;
+      if (points.size() == 0)
+        continue;
+
+      //choosePoint(points);
+      Q.push_back(points.front());
+      if (Q.size() > 20)
+        Q.pop_front();
+
+      if(!points.empty()) {
+        auto p = points.front();
+        //cout << "p.x: " << p.x << " " << "p.y: " << p.y << endl;
+        DataProcessor::instance()->SendCursorData(p.x, p.y, getClick(), serverSock);
+        circle(cameraFeed, p, 10, Scalar(0, 0, 255));
+        break;
+      }
     }
-
+    if (attempts == 0) {
+      cout << "wtf" << endl;
+    }
     imshow("Camera", cameraFeed);
 
     waitKey(10);
