@@ -36,16 +36,16 @@ long int DataProcessor::getTime()
 void DataProcessor::SendCursorData(int x, int y, int state, int socket)
 {
     if (m_queuedData.size() > MAX_QUEUE_SIZE) {
-	m_queuedData.pop();
+	m_queuedData.pop_front();
     }
 
-    m_queuedData.push(CursorData(x,y,state));
+    m_queuedData.push_back(CursorData(x,y,state));
 
 
     if (getTime() - m_lastTimeSent > 5) {
 	m_lastTimeSent = getTime();
-	char* msg = m_queuedData.front().ToMsg();
-	m_queuedData.pop();
+	char* msg = m_queuedData.back().ToMsg();
+	m_queuedData.pop_front();
 	send(socket, msg, 5, 0);
 	delete msg;
     }
