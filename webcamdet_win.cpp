@@ -217,6 +217,7 @@ int getClick() {
 vector<vector<int>> keyboard;
 long long currentTime = 0;
 long long tmpTime = 0;
+long long lastClickTime = 0;
 long long limitTime = 2000;
 int enterKey = 0;
 char currentLetter = 0;
@@ -269,6 +270,13 @@ int main(int argc, char** argv)
       click = 1;
       currentTime = 0;
       tmpTime = DataProcessor::getTime();
+
+      long long crtClickTime = DataProcessor::getTime();
+      if(crtClickTime - lastClickTime) {
+        cout << "RIGHT CLICK!!!";
+      }
+
+      lastClickTime = crtClickTime;
     }
     else {
       click = 0;
@@ -280,7 +288,6 @@ int main(int argc, char** argv)
         enterKey = 1 - enterKey;
         currentTime = 0;
     }
-
 
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
 	   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
