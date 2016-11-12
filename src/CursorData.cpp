@@ -1,6 +1,6 @@
 #include "../include/CursorData.h"
 
-CursorData::CursorData(int _x, int _y, int _leftClick, int _rightClick , int _key ) : 
+CursorData::CursorData(int _x, int _y, int _leftClick, int _rightClick , char _key ) : 
     x(_x), y(_y), leftClick(_leftClick), rightClick(_rightClick), key(_key)
 {
 

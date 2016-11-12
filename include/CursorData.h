@@ -3,7 +3,7 @@ class CursorData
 {
 public:
 
-    CursorData(int _x = 0, int _y = 0, int leftClick = 0, int _rightClick = 0, int key = 0);
+    CursorData(int _x = 0, int _y = 0, int leftClick = 0, int _rightClick = 0, char key = 0);
     CursorData(const CursorData& ref);
     ~CursorData();
     char* ToMsg() const;
@@ -12,5 +12,5 @@ public:
     int y;
     int leftClick;
     int rightClick;
-    int key;
+    char key;
 };
