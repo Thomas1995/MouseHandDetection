@@ -8,8 +8,49 @@
 #include "include/DataProcessor.h"
 #include <deque>
 
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+
 using namespace std;
 using namespace cv;
+
+String face_cascade_name = "haarcascade_frontalface_alt.xml";
+String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
+CascadeClassifier face_cascade;
+CascadeClassifier eyes_cascade;
+string window_name = "Capture - Face detection";
+RNG rng(12345);
+
+void detectAndDisplay( Mat frame ) {
+  std::vector<Rect> faces;
+  Mat frame_gray;
+
+  cvtColor( frame, frame_gray, CV_BGR2GRAY );
+  equalizeHist( frame_gray, frame_gray );
+
+  //-- Detect faces
+  face_cascade.detectMultiScale( frame_gray, faces, 1.1, 5, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30) );
+
+  for( size_t i = 0; i < faces.size(); i++ )
+  {
+    Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
+    ellipse( frame, center, Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
+
+    Mat faceROI = frame_gray( faces[i] );
+    std::vector<Rect> eyes;
+
+    //-- In each face, detect eyes
+    eyes_cascade.detectMultiScale( faceROI, eyes, 1.2, 7, 0 |CV_HAAR_SCALE_IMAGE, Size(30, 30) );
+
+    for( size_t j = 0; j < eyes.size(); j++ )
+     {
+       Point center( faces[i].x + eyes[j].x + eyes[j].width*0.5, faces[i].y + eyes[j].y + eyes[j].height*0.5 );
+       int radius = cvRound( (eyes[j].width + eyes[j].height)*0.25 );
+       circle( frame, center, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
+     }
+  }
+ }
 
 struct LIMITS {
   int H_MIN;
@@ -229,8 +270,6 @@ long long limitLetterTime = 1000;
 
 long long debug = 0;
 
-bool shiftPressed, ctrlPressed, ctrlshiftPressed, lastComm, capsLockOn;
-
 vector<string> keys = {
   "a", "b", "c", "d", "e", "f", "g", "h",
   "i", "j", "k", "l", "m", "n", "o", "p",
@@ -247,9 +286,14 @@ vector<char> keyCodes {
 
 int main(int argc, char** argv)
 {
+  if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
+  cerr<<"HAHAHA\n\n";
+  if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
+  cerr<<"HAHAHA\n\n";
+
   tmpTime = DataProcessor::getTime();
-  //connect_to_server(argc, argv);
-  //identify();
+  connect_to_server(argc, argv);
+  identify();
 
   keyboard.resize('z' - 'a' + 1);
 
@@ -273,6 +317,8 @@ int main(int argc, char** argv)
     Mat dst;
     flip(cameraFeed, dst, 1);
     cameraFeed = dst;
+
+    detectAndDisplay(cameraFeed);
 
     //Mat src = cameraFeed;
     Mat src;
@@ -348,62 +394,7 @@ int main(int argc, char** argv)
         currentLetter = newLetter;
         tmpLetterTime = DataProcessor::getTime();
         if (currentLetterTime >= limitLetterTime) {
-          if(currentLetter == 1) {
-            if(shiftPressed == false)
-              ctrlPressed = true;
-            else
-              ctrlshiftPressed = true,
-              shiftPressed = false;
-          }
-          else if(currentLetter == 2) {
-            if(ctrlPressed == false)
-              shiftPressed = true;
-            else
-              ctrlshiftPressed = true,
-              ctrlPressed = false;
-          }
-          else if(currentLetter == 3) {
-            ctrlshiftPressed = true;
-            shiftPressed = ctrlPressed = false;
-          }
-          else {
-            if(shiftPressed) {
-              if(currentLetter >= 'a' && currentLetter <= 'z' && !capsLockOn)
-                currentLetter -= 'a' - 'A';
-
-              cerr << currentLetter;
-              lastComm = false;
-            }
-            else if(ctrlPressed) {
-              if(!lastComm) cerr<<"\n";
-              cerr << "CTRL + " << currentLetter << "\n";
-              lastComm = true;
-            }
-            else if(ctrlshiftPressed) {
-              if(!lastComm) cerr<<"\n";
-              cerr << "CTRL + SHIFT + " << currentLetter << "\n";
-              lastComm = true;
-            }
-            else {
-              if(capsLockOn) {
-                if(currentLetter >= 'a' && currentLetter <= 'z')
-                  currentLetter -= 'a' - 'A';
-
-                cerr << currentLetter;
-              }
-              else
-                cerr << currentLetter;
-              lastComm = false;
-
-              if(currentLetter == 8) {
-                cerr << ' ' << (char)8;
-              }
-            }
-
-            ctrlPressed = shiftPressed = ctrlshiftPressed = false;
-          }
-
-          //fflush(cout);
+          cout << currentLetter << endl;
           hasEnteredKey = true;
           enteredKey = currentLetter;
           currentLetterTime = 0;
@@ -415,24 +406,19 @@ JUMP:
       if(!points.empty()) {
         auto p = points.front();
         //cout << "p.x: " << p.x << " " << "p.y: " << p.y << endl;
-        //DataProcessor::instance()->SendCursorData(p.x, p.y, click/*getClick()*/, serverSock);
+        DataProcessor::instance()->SendCursorData(p.x, p.y, click/*getClick()*/, serverSock);
         if(!hasEnteredKey)
           enteredKey = 0;
 
         rightclick = 0;
         //DataProcessor::instance()->SendInputDataWin(p.x, p.y, enteredKey, click, rightclick, serverSock);
 
-        if(p.x <= KEYBOARD_SECTION && p.y <= KEYBOARD_SECTION)
-          capsLockOn = true;
-        if(FRAME_WIDTH - p.x <= KEYBOARD_SECTION && p.y <= KEYBOARD_SECTION)
-          capsLockOn = false;
-
+        if(p.x <= KEYBOARD_SECTION && p.y <= KEYBOARD_SECTION && click)
+          enterKey = 1 - enterKey;
         circle(cameraFeed, p, 10, Scalar(0, 0, 255));
         break;
       }
     }
-
-    enterKey = 1;
 
     if (enterKey) {
       int xRatio = FRAME_WIDTH / 8;
@@ -454,14 +440,8 @@ JUMP:
       }
     }
 
-    if(!capsLockOn) {
-      line(cameraFeed, Point(0, KEYBOARD_SECTION), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
-      line(cameraFeed, Point(KEYBOARD_SECTION, 0), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
-    }
-    else {
-      line(cameraFeed, Point(FRAME_WIDTH - KEYBOARD_SECTION, 0), Point(FRAME_WIDTH - KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
-      line(cameraFeed, Point(FRAME_WIDTH, KEYBOARD_SECTION), Point(FRAME_WIDTH - KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
-    }
+    line(cameraFeed, Point(0, KEYBOARD_SECTION), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
+    line(cameraFeed, Point(KEYBOARD_SECTION, 0), Point(KEYBOARD_SECTION, KEYBOARD_SECTION), Scalar(0, 0, 255));
 
     imshow("Camera", cameraFeed);
 
