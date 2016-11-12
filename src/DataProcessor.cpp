@@ -36,6 +36,7 @@ long int DataProcessor::getTime()
 }
 void DataProcessor::SendCursorData(int x, int y, int state, int socket)
 {
+  //  printf("time %lu\n", getTime());
     if (m_queuedData.size() > MAX_QUEUE_SIZE) {
 	m_queuedData.pop_front();
     }

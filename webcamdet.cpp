@@ -223,7 +223,7 @@ char currentLetter = 0;
 
 long long currentLetterTime = 0;
 long long tmpLetterTime = 0;
-long long limitLetterTime = 5000;
+long long limitLetterTime = 1000;
 
 int main(int argc, char** argv)
 {
@@ -267,7 +267,6 @@ int main(int argc, char** argv)
     vector<Point> clickPoints = trackObject(threshold, dump);
     if (dump >= 30) {
       click = 1;
-
       currentTime += DataProcessor::getTime() - tmpTime;
       tmpTime = DataProcessor::getTime();
     } else {
@@ -292,7 +291,8 @@ int main(int argc, char** argv)
     int attempts = 1;
     while (attempts != 0) {
 
-      auto points = trackObject(threshold, dump);
+      int nothing;
+      auto points = trackObject(threshold, nothing);
 
       attempts--;
       if (points.size() == 0)
