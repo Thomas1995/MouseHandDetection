@@ -169,6 +169,7 @@ void morphOps(Mat &thresh){
 
 extern int serverSock;
 int click;
+int rightclick;
 bool moved = true;
 int moveCount = 0;
 
@@ -316,6 +317,9 @@ int main(int argc, char** argv)
       if (Q.size() > 20)
         Q.pop_front();
 
+      bool hasEnteredKey = false;
+      char enteredKey;
+
       if (enterKey) {
         int xRatio = FRAME_WIDTH / 8;
         int yRatio = FRAME_HEIGHT / 5;
@@ -343,6 +347,8 @@ int main(int argc, char** argv)
         tmpLetterTime = DataProcessor::getTime();
         if (currentLetterTime >= limitLetterTime) {
           cout << currentLetter << endl;
+          hasEnteredKey = true;
+          enteredKey = currentLetter;
           currentLetterTime = 0;
         }
       }
@@ -352,7 +358,13 @@ JUMP:
       if(!points.empty()) {
         auto p = points.front();
         //cout << "p.x: " << p.x << " " << "p.y: " << p.y << endl;
-        DataProcessor::instance()->SendCursorData(p.x, p.y, click/*getClick()*/, serverSock);
+        //DataProcessor::instance()->SendCursorData(p.x, p.y, click/*getClick()*/, serverSock);
+        if(!hasEnteredKey)
+          enteredKey = 0;
+
+        rightclick = 0;
+        DataProcessor::instance()->SendInputDataWin(p.x, p.y, enteredKey, click, rightclick, serverSock);
+
         if(p.x <= KEYBOARD_SECTION && p.y <= KEYBOARD_SECTION && click)
           enterKey = 1 - enterKey;
         circle(cameraFeed, p, 10, Scalar(0, 0, 255));
