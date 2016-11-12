@@ -26,7 +26,7 @@ struct LIMITS {
 //LIMITS red_limit(0, 10, 135, 177, 74, 256);
 //LIMITS red_limit(0, 10, 143, 256, 86, 162);
 LIMITS red_limit(0, 14, 196, 222, 0, 255);
-LIMITS blue_limit(77, 131, 63, 141, 75, 133);
+LIMITS blue_limit(77, 132, 141, 256, 0, 256);
 LIMITS orange_limit(0, 25, 206, 256, 0, 256);
 LIMITS green_limit(35, 139, 38, 58, 175, 256);
 
@@ -265,10 +265,19 @@ int main(int argc, char** argv)
       if (Q.size() > 20)
         Q.pop_front();
 
+        inRange(HSV, Scalar(blue_limit.H_MIN, blue_limit.S_MIN, blue_limit.V_MIN),
+         Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
+        morphOps(threshold);
+        vector<Point> clickPoints = trackObject(threshold, dump);
+        if (clickPoints.size() >= 1)
+          click = 1;
+        else
+          click = 0;
+
       if(!points.empty()) {
         auto p = points.front();
         //cout << "p.x: " << p.x << " " << "p.y: " << p.y << endl;
-        DataProcessor::instance()->SendCursorData(p.x, p.y, getClick(), serverSock);
+        DataProcessor::instance()->SendCursorData(p.x, p.y, click/*getClick()*/, serverSock);
         circle(cameraFeed, p, 10, Scalar(0, 0, 255));
         break;
       }
