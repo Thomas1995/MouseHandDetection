@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "client.h"
 #include "include/DataProcessor.h"
+#include <deque>
 
 using namespace std;
 using namespace cv;
@@ -81,6 +82,7 @@ Point chooseClosestTo(Point target, vector<Point>& points) {
 Point lastPoint;
 bool lastPointExists = false;
 int counter = NO_SELECTION_LIMIT;
+deque<Point> Q;
 
 void choosePoint(vector<Point>& points) {
 
@@ -110,6 +112,11 @@ void choosePoint(vector<Point>& points) {
 
       lastPoint = p;
       tmp.push_back(lastPoint);
+
+      Q.push_back(lastPoint);
+      if(Q.size() >= 10)
+        Q.pop_front();
+
       counter = 0;
     }
     else {
@@ -162,8 +169,8 @@ void morphOps(Mat &thresh){
 extern int serverSock;
 int click;
 
-int getClick(Mat& img) {
-  LIMITS lim = green_limit;
+int getClick() {
+  /*LIMITS lim = green_limit;
   Mat HSV, threshold;
   img.copyTo(HSV);
 
@@ -175,12 +182,15 @@ int getClick(Mat& img) {
   int nrp;
   trackObject(threshold, nrp);
 
-  cout << nrp << "\n";
-
   if(nrp >= 20)
     return 0;
 
-  return 1;
+  return 1;*/
+
+  if( dist(Q.front(), Q.back()) <= 30 )
+    click = 1 - click;
+
+  return click;
 }
 
 int main(int argc, char** argv)
@@ -211,8 +221,6 @@ int main(int argc, char** argv)
 
     cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
-    click = getClick(HSV);
-
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
 	   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
 
@@ -224,7 +232,7 @@ int main(int argc, char** argv)
 
     if(!points.empty()) {
       auto p = points.front();
-      DataProcessor::instance()->SendCursorData(p.x, p.y, click, serverSock);
+      DataProcessor::instance()->SendCursorData(p.x, p.y, getClick(), serverSock);
       circle(cameraFeed, p, 10, Scalar(0, 0, 255));
     }
 
