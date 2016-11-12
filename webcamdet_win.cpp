@@ -235,6 +235,13 @@ vector<string> keys = {
   "y", "z", "space", "enter", "ctrl", "shift", "ctsh", "back"
 };
 
+vector<char> keyCodes {
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+  'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+  'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+  'y', 'z', ' ', '\n', 1, 2, 3, 8
+};
+
 int main(int argc, char** argv)
 {
   tmpTime = DataProcessor::getTime();
@@ -325,9 +332,8 @@ int main(int argc, char** argv)
         if(idx > keys.size())
           goto JUMP;
 
-        char newLetter = keys[idx][0];
+        char newLetter = keyCodes[idx];
 
-        //char newLetter = (char)('a' + (((int)(x / xRatio) * 6 + (int)(y / yRatio)) % 26));
         if (currentLetter == newLetter) {
           currentLetterTime += DataProcessor::getTime() - tmpLetterTime;
         } else {
@@ -366,10 +372,6 @@ JUMP:
       int nr = 0;
       for (int j = 0; j < 4; j++) {
         for (int i = 0; i < 8; i++) {
-          /*char c = 'a' + ((i * 6 + j) % 26);
-          string s;
-          s.push_back(c);*/
-
           string s = keys[nr++];
 
           putText(cameraFeed, s.c_str(), cvPoint(xRatio * i + 5, yRatio * (j + 2) - yRatio / 2),
