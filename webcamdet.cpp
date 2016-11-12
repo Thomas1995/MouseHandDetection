@@ -269,7 +269,7 @@ int main(int argc, char** argv)
          Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
         morphOps(threshold);
         vector<Point> clickPoints = trackObject(threshold, dump);
-        if (clickPoints.size() >= 1)
+        if (dump >= 30)
           click = 1;
         else
           click = 0;
@@ -282,9 +282,7 @@ int main(int argc, char** argv)
         break;
       }
     }
-    if (attempts == 0) {
-      cout << "wtf" << endl;
-    }
+    
     imshow("Camera", cameraFeed);
 
     waitKey(10);
