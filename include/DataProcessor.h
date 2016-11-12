@@ -1,5 +1,5 @@
 #pragma once
-#include <queue>
+#include <deque>
 #include "CursorData.h"
 
 class DataProcessor
@@ -15,7 +15,7 @@ private:
 
     long int getTime();
     static DataProcessor* m_instance;
-    std::queue<CursorData> m_queuedData;
+    std::deque<CursorData> m_queuedData;
     long int m_lastTimeSent;
    
 };
