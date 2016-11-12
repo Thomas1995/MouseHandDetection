@@ -217,7 +217,7 @@ int getClick() {
 vector<vector<int>> keyboard;
 long long currentTime = 0;
 long long tmpTime = 0;
-long long limitTime = 5000;
+long long limitTime = 2000;
 int enterKey = 0;
 char currentLetter = 0;
 
@@ -244,6 +244,7 @@ int main(int argc, char** argv)
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
   LIMITS lim = orange_limit;
+  int nothing = 100;
 
   while(true) {
     //printf("time img %lu\n", DataProcessor::getTime());
@@ -260,26 +261,25 @@ int main(int argc, char** argv)
     cameraFeed = src;
     cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
-
     inRange(HSV, Scalar(blue_limit.H_MIN, blue_limit.S_MIN, blue_limit.V_MIN),
     Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
     morphOps(threshold);
     vector<Point> clickPoints = trackObject(threshold, dump);
-    if (dump >= 30) {
+    if (dump < 30) {
       click = 1;
-      currentTime += DataProcessor::getTime() - tmpTime;
-      tmpTime = DataProcessor::getTime();
-    } else {
-
-      click = 0;
       currentTime = 0;
       tmpTime = DataProcessor::getTime();
     }
+    else {
+      click = 0;
+      currentTime += DataProcessor::getTime() - tmpTime;
+      tmpTime = DataProcessor::getTime();
+    }
 
-    if (currentTime > limitTime) {
+    /*if (currentTime > limitTime && nothing <= 5) {
         enterKey = 1 - enterKey;
         currentTime = 0;
-    }
+    }*/
 
 
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
@@ -287,11 +287,8 @@ int main(int argc, char** argv)
 
     morphOps(threshold);
 
-
     int attempts = 1;
     while (attempts != 0) {
-
-      int nothing;
       auto points = trackObject(threshold, nothing);
 
       attempts--;
@@ -332,7 +329,7 @@ int main(int argc, char** argv)
       }
     }
 
-    if (enterKey) {
+    /*if (enterKey) {
       int xRatio = FRAME_WIDTH / 5;
       int yRatio = FRAME_HEIGHT / 6;
       for (int i = 1; i <= 5; i++)
@@ -350,8 +347,7 @@ int main(int argc, char** argv)
               FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
         }
       }
-
-    }
+    }*/
     imshow("Camera", cameraFeed);
 
     waitKey(10);
