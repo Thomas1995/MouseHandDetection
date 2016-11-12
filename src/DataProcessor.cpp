@@ -4,8 +4,9 @@
 #include <sys/time.h>
 #include <cstdio>
 #include <math.h>
-#define MAX_QUEUE_SIZE 25
+#define MAX_QUEUE_SIZE 5
 #define PREDICTION_OFFSET 2.82
+#define DELTA_TIME_SEND 7
 
 
 DataProcessor* DataProcessor::m_instance = nullptr;
@@ -42,12 +43,27 @@ void DataProcessor::SendCursorData(int x, int y, int state, int socket)
     m_queuedData.push_back(CursorData(x,y,state));
 
 
-    if (getTime() - m_lastTimeSent > 5) {
+    if (getTime() - m_lastTimeSent > DELTA_TIME_SEND) {
 	m_lastTimeSent = getTime();
-	char* msg = m_queuedData.back().ToMsg();
+	char* msg;
+	msg = DataProcessor::instance()->Interpolate().ToMsg();
+
 	m_queuedData.pop_front();
 	send(socket, msg, 5, 0);
 	delete msg;
     }
+}
+CursorData DataProcessor::Interpolate()
+{
+    double x = 0, y = 0, state = 0;
+    for (auto it : m_queuedData)
+    {
+	x += it.x;
+	y += it.y;
+	state += it.state;
+
+
+    }
+    return CursorData(round(x / m_queuedData.size()), round(y / m_queuedData.size()), round(state / m_queuedData.size()));
 }
 

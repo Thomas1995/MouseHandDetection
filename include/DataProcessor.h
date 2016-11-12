@@ -12,7 +12,7 @@ public:
     long int GetLastTime();
 private:
     DataProcessor();
-
+    CursorData Interpolate();
     long int getTime();
     static DataProcessor* m_instance;
     std::deque<CursorData> m_queuedData;
