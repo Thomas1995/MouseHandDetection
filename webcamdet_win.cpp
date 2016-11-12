@@ -26,7 +26,7 @@ struct LIMITS {
 //LIMITS red_limit(0, 10, 135, 177, 74, 256);
 //LIMITS red_limit(0, 10, 143, 256, 86, 162);
 LIMITS red_limit(0, 14, 196, 222, 0, 255);
-LIMITS blue_limit(77, 132, 141, 256, 0, 256);
+LIMITS blue_limit(77, 132, 141, 256, 54, 256);
 LIMITS orange_limit(0, 25, 206, 256, 0, 256);
 LIMITS green_limit(30, 43, 126, 256, 0, 256);
 

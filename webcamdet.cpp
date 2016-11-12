@@ -135,7 +135,9 @@ vector<Point> trackObject(Mat& threshold, int& nrp) {
 
   nrp = 0;
   for(auto cont : contours) {
-    nrp += cont.size();
+      for (auto p : cont)
+        if (p.x >= FRAME_WIDTH / 2)
+          nrp++;
   }
 
 	double refArea = 0;
@@ -265,7 +267,13 @@ int main(int argc, char** argv)
     Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
     morphOps(threshold);
     vector<Point> clickPoints = trackObject(threshold, dump);
-    if (dump < 30) {
+
+    dump = 0;
+    for (auto p : clickPoints)
+      if (p.x >= FRAME_WIDTH * 0.75)
+        dump++;
+
+    if (dump < 1) {
       click = 1;
       currentTime = 0;
       tmpTime = DataProcessor::getTime();
@@ -348,6 +356,8 @@ int main(int argc, char** argv)
         }
       }
     }*/
+    for (auto p : clickPoints)
+      circle(cameraFeed, p, 10, Scalar(0, 255, 0));
     imshow("Camera", cameraFeed);
 
     waitKey(10);
