@@ -26,6 +26,7 @@ struct LIMITS {
 //LIMITS red_limit(0, 10, 135, 177, 74, 256);
 LIMITS red_limit(0, 10, 143, 256, 86, 162);
 LIMITS blue_limit(77, 131, 63, 141, 75, 133);
+LIMITS orange_limit(0, 25, 206, 256, 0, 256);
 
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
@@ -171,10 +172,15 @@ int main(int argc, char** argv)
 	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
 	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
-  LIMITS lim = red_limit;
+  LIMITS lim = orange_limit;
 
 	while(true) {
 		capture.read(cameraFeed);
+
+    Mat dst;
+    flip(cameraFeed, dst, 1);
+    cameraFeed = dst;
+
 		Mat src = cameraFeed;
 
 		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
