@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <math.h>
 #define MAX_QUEUE_SIZE 5
-#define DELTA_DATA_SEND 8
+#define DELTA_TIME_SEND 3
 
 
 DataProcessor* DataProcessor::m_instance = nullptr;
@@ -13,7 +13,7 @@ DataProcessor* DataProcessor::instance()
 {
     if (m_instance == nullptr) {
         m_instance = new DataProcessor();
-        
+
 
     }
     return m_instance;
@@ -21,7 +21,7 @@ DataProcessor* DataProcessor::instance()
 DataProcessor::DataProcessor() : m_lastTimeSent(0)
 {
 
-	
+
 }
 long int DataProcessor::GetLastTime()
 {
@@ -35,20 +35,35 @@ long int DataProcessor::getTime()
 }
 void DataProcessor::SendCursorData(int x, int y, int state, int socket)
 {
-    printf("%d\n", getTime());
     if (m_queuedData.size() > MAX_QUEUE_SIZE) {
-		m_queuedData.pop_front();
+	m_queuedData.pop_front();
     }
-
     m_queuedData.push_back(CursorData(x,y,state));
 
 
-    if (getTime() - m_lastTimeSent > DELTA_DATA_SEND) {
-		m_lastTimeSent = getTime();
-		char* msg = m_queuedData.back().ToMsg();
-		m_queuedData.pop_front();
-		send(socket, msg, 5, 0);
-		delete msg;
-    }
-}
+    if (getTime() - m_lastTimeSent > DELTA_TIME_SEND) {
+	m_lastTimeSent = getTime();
+	char* msg;
+	msg = DataProcessor::instance()->Interpolate().ToMsg();
 
+	if (getTime() - m_lastTimeSent > DELTA_DATA_SEND) {
+	    m_lastTimeSent = getTime();
+	    char* msg = m_queuedData.back().ToMsg();
+	    m_queuedData.pop_front();
+	    send(socket, msg, 5, 0);
+	    delete msg;
+	}
+    }
+
+}
+CursorData DataProcessor::Interpolate()
+{
+    double x = 0, y = 0, state = 0;
+    for (auto it : m_queuedData)
+    {
+    	x += it.x;
+    	y += it.y;
+    	state += it.state;
+    }
+    return CursorData(round(x / m_queuedData.size()), round(y / m_queuedData.size()), m_queuedData.back().state);
+}

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "client.h"
 #include "include/DataProcessor.h"
+#include <deque>
 
 using namespace std;
 using namespace cv;
@@ -23,8 +24,11 @@ struct LIMITS {
 };
 
 //LIMITS red_limit(0, 10, 135, 177, 74, 256);
-LIMITS red_limit(0, 10, 143, 256, 86, 162);
-LIMITS blue_limit(77, 131, 63, 141, 75, 133);
+//LIMITS red_limit(0, 10, 143, 256, 86, 162);
+LIMITS red_limit(0, 14, 196, 222, 0, 255);
+LIMITS blue_limit(77, 132, 141, 256, 0, 256);
+LIMITS orange_limit(0, 25, 206, 256, 0, 256);
+LIMITS green_limit(35, 139, 38, 58, 175, 256);
 
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
@@ -78,6 +82,7 @@ Point chooseClosestTo(Point target, vector<Point>& points) {
 Point lastPoint;
 bool lastPointExists = false;
 int counter = NO_SELECTION_LIMIT;
+deque<Point> Q;
 
 void choosePoint(vector<Point>& points) {
 
@@ -107,6 +112,11 @@ void choosePoint(vector<Point>& points) {
 
       lastPoint = p;
       tmp.push_back(lastPoint);
+
+      Q.push_back(lastPoint);
+      if(Q.size() >= 10)
+        Q.pop_front();
+
       counter = 0;
     }
     else {
@@ -117,11 +127,16 @@ void choosePoint(vector<Point>& points) {
   }
 }
 
-vector<Point> trackObject(Mat& threshold, Mat& cameraFeed) {
+vector<Point> trackObject(Mat& threshold, int& nrp) {
 	vector<Point> points;
 	vector< vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 	findContours(threshold, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+
+  nrp = 0;
+  for(auto cont : contours) {
+    nrp += cont.size();
+  }
 
 	double refArea = 0;
 	bool objectFound = false;
@@ -152,50 +167,195 @@ void morphOps(Mat &thresh){
 }
 
 extern int serverSock;
-int click = 1;
+int click;
+bool moved = true;
+int moveCount = 0;
+
+double getDist(double x1, double y1, double x2, double y2) {
+  return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}
+
+int getClick() {
+  /*if( dist(Q.front(), Q.back()) <= 30) {
+    if(moved)
+      click = 1 - click;
+    if(++moveCount % 5 == 0)
+      moved = false;
+  }
+  else {
+    moved = true;
+  }*/
+
+  if (Q.size() < 12)
+    return click;
+
+  double meanX = 0;
+  double meanY = 0;
+  for (auto& it : Q) {
+    meanX += it.x;
+    meanY += it.y;
+  }
+
+  meanX /= Q.size();
+  meanY /= Q.size();
+
+  double maxDist = 45;
+
+  int count = 0;
+  for (auto it : Q) {
+    if (getDist(it.x, it.y, meanX, meanY) > maxDist)
+      count++;
+    if (count > Q.size() / 5)
+      return click;
+  }
+  Q.clear();
+  click = 1 - click;
+  return click;
+
+}
+
+vector<vector<int>> keyboard;
+long long currentTime = 0;
+long long tmpTime = 0;
+long long limitTime = 5000;
+int enterKey = 0;
+char currentLetter = 0;
+
+long long currentLetterTime = 0;
+long long tmpLetterTime = 0;
+long long limitLetterTime = 1000;
 
 int main(int argc, char** argv)
 {
+  tmpTime = DataProcessor::getTime();
   connect_to_server(argc, argv);
   identify();
-  
 
-	Mat cameraFeed;
-	Mat threshold;
-	Mat HSV;
+  keyboard.resize('z' - 'a' + 1);
 
-	VideoCapture capture;
+  Mat cameraFeed;
+  Mat threshold;
+  Mat HSV;
 
-	capture.open(0);
-	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+  VideoCapture capture;
 
-  LIMITS lim = red_limit;
+  capture.open(0);
+  capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+  capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
-	while(true) {
-		capture.read(cameraFeed);
-		Mat src = cameraFeed;
+  LIMITS lim = orange_limit;
 
-		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
+  while(true) {
+    //printf("time img %lu\n", DataProcessor::getTime());
+    capture.read(cameraFeed);
+    int dump;
+    Mat dst;
+    flip(cameraFeed, dst, 1);
+    cameraFeed = dst;
 
-		inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
-      Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
+    //Mat src = cameraFeed;
+    Mat src;
+    cv::GaussianBlur(cameraFeed, src, cv::Size(0, 0), 3);
+    cv::addWeighted(cameraFeed, 1.5, src, -0.5, 0, src);
+    cameraFeed = src;
+    cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
-	  morphOps(threshold);
 
-		auto points = trackObject(threshold, cameraFeed);
-		choosePoint(points);
+    inRange(HSV, Scalar(blue_limit.H_MIN, blue_limit.S_MIN, blue_limit.V_MIN),
+    Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
+    morphOps(threshold);
+    vector<Point> clickPoints = trackObject(threshold, dump);
+    if (dump >= 30) {
+      click = 1;
+      currentTime += DataProcessor::getTime() - tmpTime;
+      tmpTime = DataProcessor::getTime();
+    } else {
 
-		if(!points.empty()) {
-      auto p = points.front();
-      DataProcessor::instance()->SendCursorData(FRAME_WIDTH - p.x, p.y, click, serverSock);
-			circle(cameraFeed, p, 10, Scalar(0, 0, 255));
-		}
+      click = 0;
+      currentTime = 0;
+      tmpTime = DataProcessor::getTime();
+    }
 
-		imshow("Camera", cameraFeed);
+    if (currentTime > limitTime) {
+        enterKey = 1 - enterKey;
+        currentTime = 0;
+    }
 
-		waitKey(10);
-	}
 
-	return 0;
+    inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
+	   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
+
+    morphOps(threshold);
+
+
+    int attempts = 1;
+    while (attempts != 0) {
+
+      int nothing;
+      auto points = trackObject(threshold, nothing);
+
+      attempts--;
+      if (points.size() == 0)
+        continue;
+
+      //choosePoint(points);
+      Q.push_back(points.front());
+      if (Q.size() > 20)
+        Q.pop_front();
+
+      if (enterKey) {
+        int xRatio = FRAME_WIDTH / 5;
+        int yRatio = FRAME_HEIGHT / 6;
+        double x = points.front().x;
+        double y = points.front().y;
+
+        char newLetter = (char)('a' + (((int)(x / xRatio) * 6 + (int)(y / yRatio)) % 26));
+        if (currentLetter == newLetter) {
+          currentLetterTime += DataProcessor::getTime() - tmpLetterTime;
+        } else {
+          currentLetterTime = 0;
+        }
+        currentLetter = newLetter;
+        tmpLetterTime = DataProcessor::getTime();
+        if (currentLetterTime >= limitLetterTime) {
+          cout << currentLetter << endl;
+          currentLetterTime = 0;
+        }
+      }
+
+      if(!points.empty()) {
+        auto p = points.front();
+        //cout << "p.x: " << p.x << " " << "p.y: " << p.y << endl;
+        DataProcessor::instance()->SendCursorData(p.x, p.y, click/*getClick()*/, serverSock);
+        circle(cameraFeed, p, 10, Scalar(0, 0, 255));
+        break;
+      }
+    }
+
+    if (enterKey) {
+      int xRatio = FRAME_WIDTH / 5;
+      int yRatio = FRAME_HEIGHT / 6;
+      for (int i = 1; i <= 5; i++)
+        line(cameraFeed, Point(i * xRatio, 0), Point(i * xRatio, FRAME_HEIGHT), Scalar(0, 255, 0));
+
+      for (int i = 1; i <= 5; i++)
+        line(cameraFeed, Point(0, i * yRatio), Point(FRAME_WIDTH, i * yRatio), Scalar(0, 255, 0));
+
+      for (int j = 0; j < 6; j++) {
+        for (int i = 0; i < 5; i++) {
+          char c = 'a' + ((i * 6 + j) % 26);
+          string s;
+          s.push_back(c);
+          putText(cameraFeed, s.c_str(), cvPoint(xRatio * i, yRatio * (j + 1)),
+              FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
+        }
+      }
+
+    }
+    imshow("Camera", cameraFeed);
+
+    waitKey(10);
+  }
+
+  return 0;
 }
