@@ -23,9 +23,11 @@ struct LIMITS {
 };
 
 //LIMITS red_limit(0, 10, 135, 177, 74, 256);
-LIMITS red_limit(0, 10, 143, 256, 86, 162);
+//LIMITS red_limit(0, 10, 143, 256, 86, 162);
+LIMITS red_limit(0, 14, 196, 222, 0, 255);
 LIMITS blue_limit(77, 131, 63, 141, 75, 133);
 LIMITS orange_limit(0, 25, 206, 256, 0, 256);
+LIMITS green_limit(35, 139, 38, 58, 175, 256);
 
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
@@ -118,11 +120,16 @@ void choosePoint(vector<Point>& points) {
   }
 }
 
-vector<Point> trackObject(Mat& threshold, Mat& cameraFeed) {
+vector<Point> trackObject(Mat& threshold, int& nrp) {
 	vector<Point> points;
 	vector< vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 	findContours(threshold, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+
+  nrp = 0;
+  for(auto cont : contours) {
+    nrp += cont.size();
+  }
 
 	double refArea = 0;
 	bool objectFound = false;
@@ -153,7 +160,28 @@ void morphOps(Mat &thresh){
 }
 
 extern int serverSock;
-int click = 1;
+int click;
+
+int getClick(Mat& img) {
+  LIMITS lim = green_limit;
+  Mat HSV, threshold;
+  img.copyTo(HSV);
+
+  inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
+   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
+
+  morphOps(threshold);
+
+  int nrp;
+  trackObject(threshold, nrp);
+
+  cout << nrp << "\n";
+
+  if(nrp >= 20)
+    return 0;
+
+  return 1;
+}
 
 int main(int argc, char** argv)
 {
@@ -183,17 +211,20 @@ int main(int argc, char** argv)
 
     cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
+    click = getClick(HSV);
+
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
-	Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
+	   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
 
     morphOps(threshold);
 
-    auto points = trackObject(threshold, cameraFeed);
+    int dump;
+    auto points = trackObject(threshold, dump);
     choosePoint(points);
 
     if(!points.empty()) {
       auto p = points.front();
-      DataProcessor::instance()->SendCursorData(FRAME_WIDTH - p.x, p.y, click, serverSock);
+      DataProcessor::instance()->SendCursorData(p.x, p.y, click, serverSock);
       circle(cameraFeed, p, 10, Scalar(0, 0, 255));
     }
 
