@@ -214,10 +214,20 @@ int getClick() {
 
 }
 
+vector<vector<int>> keyboard;
+long long currentTime = 0;
+long long tmpTime = 0;
+long long limitTime = 5000;
+int enterKey = 0;
+char currentLetter = 0;
+
 int main(int argc, char** argv)
 {
+  tmpTime = DataProcessor::getTime();
   connect_to_server(argc, argv);
   identify();
+
+  keyboard.resize('z' - 'a' + 1);
 
   Mat cameraFeed;
   Mat threshold;
@@ -234,7 +244,7 @@ int main(int argc, char** argv)
   while(true) {
     //printf("time img %lu\n", DataProcessor::getTime());
     capture.read(cameraFeed);
-
+    int dump;
     Mat dst;
     flip(cameraFeed, dst, 1);
     cameraFeed = dst;
@@ -246,14 +256,38 @@ int main(int argc, char** argv)
     cameraFeed = src;
     cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 
+
+    inRange(HSV, Scalar(blue_limit.H_MIN, blue_limit.S_MIN, blue_limit.V_MIN),
+    Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
+    morphOps(threshold);
+    vector<Point> clickPoints = trackObject(threshold, dump);
+    if (dump >= 30 && !enterKey) {
+      click = 1;
+      cout << "adding time" << endl;
+      currentTime += DataProcessor::getTime() - tmpTime;
+      tmpTime = DataProcessor::getTime();
+    } else if (dump < 30 && !enterKey){
+      cout << "reset time" << endl;
+      click = 0;
+      currentTime = 0;
+      tmpTime = DataProcessor::getTime();
+    }
+
+    if (currentTime > limitTime) {
+        cout << "ENTER KEY" << endl;
+        enterKey = 1;
+    }
+
+
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
 	   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
 
     morphOps(threshold);
 
+
     int attempts = 1;
     while (attempts != 0) {
-      int dump;
+
       auto points = trackObject(threshold, dump);
 
       attempts--;
@@ -265,14 +299,25 @@ int main(int argc, char** argv)
       if (Q.size() > 20)
         Q.pop_front();
 
-        inRange(HSV, Scalar(blue_limit.H_MIN, blue_limit.S_MIN, blue_limit.V_MIN),
-         Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
-        morphOps(threshold);
-        vector<Point> clickPoints = trackObject(threshold, dump);
-        if (dump >= 30)
-          click = 1;
-        else
-          click = 0;
+      if (enterKey) {
+        int xRatio = FRAME_WIDTH / 5;
+        int yRatio = FRAME_HEIGHT / 6;
+        double x = points.front().x;
+        double y = points.front().y;
+
+        char newLetter = (char)('a' + (((int)(x / xRatio) * 6 + (int)(y / yRatio)) % 26));
+        if (currentLetter == newLetter) {
+          currentTime += DataProcessor::getTime() - tmpTime;
+        } else {
+          currentTime = 0;
+        }
+        currentLetter = newLetter;
+        tmpTime = DataProcessor::getTime();
+        if (currentTime >= limitTime) {
+          cout << currentLetter << endl;
+          currentTime = 0;
+        }
+      }
 
       if(!points.empty()) {
         auto p = points.front();
@@ -282,7 +327,27 @@ int main(int argc, char** argv)
         break;
       }
     }
-    
+
+    if (enterKey) {
+      int xRatio = FRAME_WIDTH / 5;
+      int yRatio = FRAME_HEIGHT / 6;
+      for (int i = 1; i <= 5; i++)
+        line(cameraFeed, Point(i * xRatio, 0), Point(i * xRatio, FRAME_HEIGHT), Scalar(0, 255, 0));
+
+      for (int i = 1; i <= 5; i++)
+        line(cameraFeed, Point(0, i * yRatio), Point(FRAME_WIDTH, i * yRatio), Scalar(0, 255, 0));
+
+      for (int j = 0; j < 6; j++) {
+        for (int i = 0; i < 5; i++) {
+          char c = 'a' + ((i * 6 + j) % 26);
+          string s;
+          s.push_back(c);
+          putText(cameraFeed, s.c_str(), cvPoint(xRatio * i, yRatio * (j + 1)),
+              FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
+        }
+      }
+
+    }
     imshow("Camera", cameraFeed);
 
     waitKey(10);
