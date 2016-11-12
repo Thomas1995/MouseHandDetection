@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include "client.h"
 #include "include/DataProcessor.h"
-#include "include/Watcher.h"
 
 using namespace std;
 using namespace cv;
@@ -159,7 +158,7 @@ int main(int argc, char** argv)
 {
   connect_to_server(argc, argv);
   identify();
-  Watcher::instance();
+  
 
 	Mat cameraFeed;
 	Mat threshold;
