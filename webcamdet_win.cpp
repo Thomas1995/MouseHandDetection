@@ -225,6 +225,8 @@ long long currentLetterTime = 0;
 long long tmpLetterTime = 0;
 long long limitLetterTime = 1000;
 
+long long debug = 0;
+
 int main(int argc, char** argv)
 {
   tmpTime = DataProcessor::getTime();
@@ -280,7 +282,6 @@ int main(int argc, char** argv)
         enterKey = 1 - enterKey;
         currentTime = 0;
     }
-
 
     inRange(HSV, Scalar(lim.H_MIN, lim.S_MIN, lim.V_MIN),
 	   Scalar(lim.H_MAX, lim.S_MAX, lim.V_MAX), threshold);
