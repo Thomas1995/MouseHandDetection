@@ -41,18 +41,13 @@ void DataProcessor::SendCursorData(int x, int y, int state, int socket)
     m_queuedData.push_back(CursorData(x,y,state));
 
 
+
     if (getTime() - m_lastTimeSent > DELTA_TIME_SEND) {
 	m_lastTimeSent = getTime();
-	char* msg;
-	msg = DataProcessor::instance()->Interpolate().ToMsg();
-
-	if (getTime() - m_lastTimeSent > DELTA_DATA_SEND) {
-	    m_lastTimeSent = getTime();
-	    char* msg = m_queuedData.back().ToMsg();
-	    m_queuedData.pop_front();
-	    send(socket, msg, 5, 0);
-	    delete msg;
-	}
+	char* msg = m_queuedData.back().ToMsg();
+	m_queuedData.pop_front();
+	send(socket, msg, 5, 0);
+	delete msg;
     }
 
 }
