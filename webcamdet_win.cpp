@@ -28,7 +28,7 @@ struct LIMITS {
 LIMITS red_limit(0, 14, 196, 222, 0, 255);
 LIMITS blue_limit(77, 132, 141, 256, 0, 256);
 LIMITS orange_limit(0, 25, 206, 256, 0, 256);
-LIMITS green_limit(35, 139, 38, 58, 175, 256);
+LIMITS green_limit(30, 43, 126, 256, 0, 256);
 
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
