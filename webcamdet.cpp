@@ -221,6 +221,10 @@ long long limitTime = 5000;
 int enterKey = 0;
 char currentLetter = 0;
 
+long long currentLetterTime = 0;
+long long tmpLetterTime = 0;
+long long limitLetterTime = 5000;
+
 int main(int argc, char** argv)
 {
   tmpTime = DataProcessor::getTime();
@@ -261,21 +265,21 @@ int main(int argc, char** argv)
     Scalar(blue_limit.H_MAX, blue_limit.S_MAX, blue_limit.V_MAX), threshold);
     morphOps(threshold);
     vector<Point> clickPoints = trackObject(threshold, dump);
-    if (dump >= 30 && !enterKey) {
+    if (dump >= 30) {
       click = 1;
-      cout << "adding time" << endl;
+
       currentTime += DataProcessor::getTime() - tmpTime;
       tmpTime = DataProcessor::getTime();
-    } else if (dump < 30 && !enterKey){
-      cout << "reset time" << endl;
+    } else {
+
       click = 0;
       currentTime = 0;
       tmpTime = DataProcessor::getTime();
     }
 
     if (currentTime > limitTime) {
-        cout << "ENTER KEY" << endl;
-        enterKey = 1;
+        enterKey = 1 - enterKey;
+        currentTime = 0;
     }
 
 
@@ -307,15 +311,15 @@ int main(int argc, char** argv)
 
         char newLetter = (char)('a' + (((int)(x / xRatio) * 6 + (int)(y / yRatio)) % 26));
         if (currentLetter == newLetter) {
-          currentTime += DataProcessor::getTime() - tmpTime;
+          currentLetterTime += DataProcessor::getTime() - tmpLetterTime;
         } else {
-          currentTime = 0;
+          currentLetterTime = 0;
         }
         currentLetter = newLetter;
-        tmpTime = DataProcessor::getTime();
-        if (currentTime >= limitTime) {
+        tmpLetterTime = DataProcessor::getTime();
+        if (currentLetterTime >= limitLetterTime) {
           cout << currentLetter << endl;
-          currentTime = 0;
+          currentLetterTime = 0;
         }
       }
 
